@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Web Dev Chatbot</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: conic-gradient(mistyrose ,lightpink,ivory);
+  color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.chat-container {
+  width: 100%;
+  max-width: 700px;
+  padding: 20px;
+  color:black;
+}
+
+h1 {
+  font-family: 'times';
+  text-align: center;
+  color:black;
+  margin-bottom: 10px;
+  box-shadow: 0px 3px 3px rgba(0,0,0,0.8)
+  ;
+  border-radius:25px;
+  -webkit-backdrop-filter: blur(30px);
+}
+
+.chat-box {
+  padding: 20px;
+  border-radius: 40px;
+  height: 300px;
+  overflow-y: auto;
+  box-shadow:0px 1px 1px rgba(0,0,1,1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation:rotate 10s linear;
+}
+
+.message {
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.user {
+  text-align: right;
+  color:darkred;
+  font-family: 'times new roman';
+}
+
+.bot {
+  text-align: left;
+  color:black;
+  font-family: times;
+}
+
+pre {
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #0f0;
+  margin-top: 10px;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+textarea {
+  flex: 1;
+  padding: 12px;
+  border-radius: 30px;
+  color:black;
+  font-size: 16px;
+  resize: none;
+  height: 28px;
+  box-shadow:1px 2px 2px rgba(0,0,0,0.8);
+  background: conic-gradient(ivory,
+  pink);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+button {
+  background:conic-gradient(maroon,pink,ivory);
+  border: none;
+  border-radius: 15px;
+  padding: 0 20px;
+  font-size: 24px;
+  color:blue;
+  cursor: pointer;
+  box-shadow: 0px 3px 3px rgba(0,0,0,0.8);
+}
+
+button:hover {
+  background:conic-gradient(mistyrose,pink,ivory);
+  color:black;
+}
+@keyframes rotate{
+  0%{
+    transform:rotate(0deg);
+  }
+  100%{
+    transform:rotate(100deg);
+  }
+}
+h3{
+  font-family: times;
+  text-align:center;
+}
+p{
+  padding-left:10px
+  padding-right:10px
+  text-size:3px;
+  text-align:center;
+  color:indigo;
+}
+
+  </style>
+</head>
+
+<body>
+  <div class="chat-container">
+    <h1> Hello I am Santosh Your A.I agent</h1>
+   <div id="notice"><h3>NOTICE:</h3>
+   <p>
+     I am not a large language model like GPT ,Gemin,Hyper AI ,Deepseek and Grok.But I am able to take user in- put and can able to provide accurate and simplify answer...
+   </p></div>
+    <div id="chatBox" class="chat-box"></div>
+    
+    <div class="input-group">
+      <textarea id="userInput" placeholder="Ask anything..."></textarea>
+      <button onclick="sendMessage()">➤</button>
+      <button onclick="startVoice()">🎙️</button>
+    </div>
+  </div>
+  
+  <!-- JSZip & FileSaver for optional zip download later -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <script>
+    const API_KEY = "AIzaSyDSIy5m7mTXlMMR_OOdCu2Af_EwoCd124w"; // Replace with your Gemini API Key
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
+const chatBox = document.getElementById("chatBox");
+
+function sendMessage() {
+  const input = document.getElementById("userInput");
+  const userText = input.value.trim();
+  if (!userText) return;
+  
+  addMessage("user", userText);
+  input.value = "";
+  getBotResponse(userText);
+}
+
+function addMessage(sender, text) {
+  const msg = document.createElement("div");
+  msg.className = `message ${sender}`;
+  
+  if (sender === "bot" && text.includes("```")) {
+    const parsed = parseCode(text);
+    msg.innerHTML = parsed;
+  } else {
+    msg.innerText = text;
+  }
+  
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function parseCode(text) {
+  return text.replace(/```(\w+)?([\s\S]*?)```/g, (_, lang, code) => {
+    return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+  });
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+async function getBotResponse(prompt) {
+  const thinking = document.createElement("div");
+  thinking.className = "message bot";
+  thinking.innerText = "Typing...";
+  chatBox.appendChild(thinking);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    
+    const data = await res.json();
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "❌ No response.";
+    thinking.remove();
+    addMessage("bot", aiText);
+  } catch (err) {
+    thinking.remove();
+    addMessage("bot", "⚠️ Error getting response.");
+  }
+}
+
+// Voice input
+function startVoice() {
+  const recognition = new(window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.start();
+  recognition.onresult = (event) => {
+    document.getElementById("userInput").value = event.results[0][0].transcript;
+  };
+  recognition.onerror = (event) => {
+    alert("Voice input error: " + event.error);
+  };
+}
+  </script>
+</body>
+
+</html>
